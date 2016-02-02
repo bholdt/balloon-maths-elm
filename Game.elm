@@ -9,6 +9,8 @@ import Balloon
 
 type State = Start | Play | Finished
 
+type Action = Score Player.Action
+
 type alias Game =
     { state: State
     , player1: Player.Model
@@ -24,7 +26,9 @@ model =
 
 
 view address model =
-    div [] [ Player.view address model.player1 ]
+    div [] [ Player.view (Signal.forwardTo address Score) model.player1 ]
 
 update action model =
-    { model | player1 = Player.Model 2 (Question.Model 3 2) [ Balloon.Model 8, Balloon.Model 2, Balloon.Model 3 ] }
+    case action of
+        Score playerAction ->
+            { model | player1 = Player.update playerAction model }

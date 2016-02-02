@@ -11,14 +11,16 @@ type alias Model =
     , balloons: List Balloon.Model
     }
 
-view address model =
-    div [] ((List.map (Balloon.view address) model.balloons) ++ [ text (toString model.score) ])
+type Action = PopBalloon Int
 
-type Action = Increment | Decrement
+view address model =
+    div [] ((List.map (viewBalloon address) model.balloons) ++ [ text (toString model.score) ])
+
+viewBalloon : Signal.Address Action -> Balloon.Model -> Html.Html
+viewBalloon address model =
+    Balloon.view address model
 
 update action model =
     case action of
-        Increment ->
-            { model | score = model.score + 1 }
-        Decrement ->
-            { model | score = model.score - 1 }
+        PopBalloon value ->
+            { model | score = model.score + 3 }

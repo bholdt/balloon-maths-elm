@@ -10,6 +10,9 @@ type Action = OnClick
 
 view address model =
     div [] [
-        button [onClick address OnClick] [ text "Press"],
+        button [onClick address OnClick ] [ text "Press"],
         text (toString model.value)
     ]
+
+update action model =
+    model
