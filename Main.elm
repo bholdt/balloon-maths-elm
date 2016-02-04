@@ -47,12 +47,6 @@ playerView address model =
            , button [ onClick address (PopBalloon model) ] [ text ("Player " ++ (toString model.id)) ]
            ]
 
---balloonView address model =
---    div [] [
---        button [onClick address ((Signal.message address << PopBalloon)) ] [ text "Press" ],
---        text (toString model.value)
---    ]
-
 update action model =
     case action of
         PopBalloon player ->
