@@ -7,7 +7,7 @@ main =
 
 type State = Start | Play | Finished
 
-type Action = PopBalloon Player
+type Action = PopBalloon Player Int
 
 type alias Game =
     { state: State
@@ -32,24 +32,44 @@ type alias Balloon =
 game: Game
 game =
     { state = Start
-    , players = [ Player 1 0 (Question 3 2) [ Balloon 8, Balloon 2, Balloon 3 ]
-                , Player 2 0 (Question 3 5) [ Balloon 8, Balloon 2, Balloon 3 ] ]
+    , players = [ Player 1 0 (Question 3 2) [ Balloon 3, Balloon 24, Balloon 23 ]
+                , Player 2 0 (Question 3 5) [ Balloon 8, Balloon 15, Balloon 14 ] ]
     }
 
 
 view address model =
-    div []  ((List.map (playerView address) model.players) ++ [ text (toString model.state) ])
-           --, button [ onClick address (PopBalloon model.player1) ] [ text "Player 1" ]
+    div []
+      ((List.map (playerView address) model.players) ++ [ text (toString model.state) ])
 
 
 playerView address model =
-    div [] [ text (toString model.score)
-           , button [ onClick address (PopBalloon model) ] [ text ("Player " ++ (toString model.id)) ]
-           ]
+    div [] ([ text ("Player " ++ (toString model.id))
+           , questionView address model.currentQuestion
+           , text ("Score " ++ (toString model.score))
+           ] ++ (balloonListView address model))
+
+questionView address model =
+  text ("Question" ++ (toString model.a) ++ " x " ++ (toString model.b))
+
+balloonListView address model =
+    List.map (balloonView address model) model.balloons
+
+balloonView address player model =
+    button [ onClick address (PopBalloon player model.value) ] [ text ("Balloon " ++ (toString model.value)) ]
+
+updateScore player answer =
+  if (player.currentQuestion.a * player.currentQuestion.b) == answer then
+    { player | score = player.score + 2 }
+  else
+    { player | score = player.score - 1 }
 
 update action model =
     case action of
-        PopBalloon player ->
-          let updatePlayer p = if p.id == player.id then { p | score = 4 } else p
+        PopBalloon player value ->
+          let updatePlayer p =
+            if p.id == player.id then
+              updateScore p value
+            else
+              p
           in
               { model | players = List.map updatePlayer model.players }
