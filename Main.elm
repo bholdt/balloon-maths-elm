@@ -1,75 +1,97 @@
-import StartApp.Simple as StartApp
-import Html exposing (div, button, text)
-import Html.Events exposing (onClick)
+module Main (..) where
 
-main =
-  StartApp.start { model = game, view = view, update = update }
+import Html exposing (..)
+import Html.Events exposing (..)
+import Effects exposing (Effects, Never)
+import Task
+import StartApp
+import Question
+import Array
 
-type State = Start | Play | Finished
+-- ACTIONS
 
-type Action = PopBalloon Player Int
+type Action
+  = NoOp | NextQuestion | AnswerQuestion Question.Action
 
-type alias Game =
-    { state: State
-    , players: List Player
+
+-- MODEL
+
+type alias Model =
+  {   questions: List Question.Model
+      , currentQuestion: Int
+      , showAnswer: Bool
+      , score: Int
+  }
+
+initialModel : Model
+initialModel = { questions = 
+        [
+             Question.Model "Capital of Namibia?" 1 [ (Question.Answer "Windhoek" True), (Question.Answer "SOmething" False), (Question.Answer "Another one" False) ]
+           , Question.Model "Capital of Australia?" 1 [ (Question.Answer "Canberra" True), (Question.Answer "Sydney" False)]
+        ]
+        , currentQuestion = 0
+        , showAnswer = False
+        , score = 0
     }
 
-type alias Player =
-    { id: Int
-    , score: Int
-    , currentQuestion: Question
-    , balloons: List Balloon
-}
 
-type alias Question =
-    { a: Int
-    , b: Int
-    }
+-- UPDATE
 
-type alias Balloon =
-    { value: Int }
-
-game: Game
-game =
-    { state = Start
-    , players = [ Player 1 0 (Question 3 2) [ Balloon 3, Balloon 24, Balloon 23 ]
-                , Player 2 0 (Question 3 5) [ Balloon 8, Balloon 15, Balloon 14 ] ]
-    }
-
-
-view address model =
-    div []
-      ((List.map (playerView address) model.players) ++ [ text (toString model.state) ])
-
-
-playerView address model =
-    div [] ([ text ("Player " ++ (toString model.id))
-           , questionView address model.currentQuestion
-           , text ("Score " ++ (toString model.score))
-           ] ++ (balloonListView address model))
-
-questionView address model =
-  text ("Question" ++ (toString model.a) ++ " x " ++ (toString model.b))
-
-balloonListView address model =
-    List.map (balloonView address model) model.balloons
-
-balloonView address player model =
-    button [ onClick address (PopBalloon player model.value) ] [ text ("Balloon " ++ (toString model.value)) ]
-
-updateScore player answer =
-  if (player.currentQuestion.a * player.currentQuestion.b) == answer then
-    { player | score = player.score + 2 }
-  else
-    { player | score = player.score - 1 }
-
+update : Action -> Model -> ( Model, Effects Action )
 update action model =
     case action of
-        PopBalloon player value ->
-          let updatePlayer p =
-            if p.id == player.id then
-              updateScore p value
-            else
-              p
-          in
-              { model | players = List.map updatePlayer model.players }
+        NextQuestion ->
+            let m = { model | currentQuestion = model.currentQuestion + 1, showAnswer = False }
+            in
+                ( m , Effects.none)
+        AnswerQuestion answer ->
+            let 
+              score = case answer of
+                Question.NoOp -> 0
+                Question.AnswerQuestion a -> a
+              m = { model | showAnswer = True, score = model.score + score }
+            in (m, Effects.none)
+        NoOp -> ( model, Effects.none )
+
+
+-- VIEW
+
+view : Signal.Address Action -> Model -> Html
+view address model =
+  let arrayQuestions = Array.fromList model.questions
+      currentQuestion = Array.get model.currentQuestion arrayQuestions
+      forwardAddress = Signal.forwardTo address AnswerQuestion
+      display = case currentQuestion of
+                    Nothing -> viewScore address model
+                    Just a -> if model.showAnswer then (Question.viewAnswer forwardAddress a) else (Question.view forwardAddress a)
+  in
+    div
+        []
+        [ display, button [ onClick address NextQuestion ] [ text "Next" ] ]
+
+viewScore address model =
+    div [] [ span [] [ text (toString model.score) ] ]
+
+
+-- START APP
+
+init : ( Model, Effects Action )
+init =
+  ( initialModel, Effects.none )
+
+app : StartApp.App Model
+app =
+  StartApp.start
+    { init = init
+    , inputs = []
+    , update = update
+    , view = view
+    }
+
+main : Signal.Signal Html
+main =
+  app.html
+
+port runner : Signal (Task.Task Never ())
+port runner =
+  app.tasks
